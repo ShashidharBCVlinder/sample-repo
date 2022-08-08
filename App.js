@@ -13,7 +13,7 @@ import {
   SafeAreaView,
   ScrollView,
   StatusBar,
-  Button,
+  // Button,
   StyleSheet,
   NativeModules,
   Text,
@@ -28,6 +28,8 @@ import {
   LearnMoreLinks,
   ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
+
+import {ButtonVW} from '@vlinder-mobile/button-widget-rn';
 
 const Section = ({children, title}): Node => {
   const isDarkMode = useColorScheme() === 'dark';
@@ -57,7 +59,7 @@ const Section = ({children, title}): Node => {
 
 const App: () => Node = () => {
   const isDarkMode = useColorScheme() === 'dark';
-  const handlePress = () => false
+  const handlePress = () => false;
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
@@ -74,23 +76,16 @@ const App: () => Node = () => {
           style={{
             backgroundColor: isDarkMode ? Colors.black : Colors.white,
           }}>
-    
-          <Section title="Learn More">
-            <Button
-              title="Initial"
-              onPress= { () => NativeModules.VlinderFaceTech.LivenessCheck()}
+          <Section title="Enrollment">
+            <ButtonVW
+              title="Click Me"
+              onPress={() => NativeModules.VlinderFaceTech.LivenessCheck()}
             />
           </Section>
-          <Section title="Learn More">
-            <Button
-              title="enrollment"
-              onPress= { () => NativeModules.VlinderFaceTech.LivenessCheck()}
-            />
-          </Section>
-          <Section title="login auth">
-            <Button
-              title="Press m e"
-              onPress= { () => NativeModules.VlinderFaceTech.LivenessCheck()}
+          <Section title="Authentication">
+            <ButtonVW
+              title="Click Me"
+              onPress={() => NativeModules.VlinderFaceTech.LivenessCheck()}
             />
           </Section>
         </View>
@@ -103,6 +98,7 @@ const styles = StyleSheet.create({
   sectionContainer: {
     marginTop: 32,
     paddingHorizontal: 24,
+    alignItems: 'center',
   },
   sectionTitle: {
     fontSize: 24,
@@ -115,6 +111,27 @@ const styles = StyleSheet.create({
   },
   highlight: {
     fontWeight: '700',
+  },
+  container: {
+    flex: 1,
+  },
+  camera: {
+    flex: 1,
+  },
+  buttonContainer: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    flexDirection: 'row',
+    margin: 20,
+  },
+  button: {
+    flex: 0.1,
+    alignSelf: 'flex-end',
+    alignItems: 'center',
+  },
+  text: {
+    fontSize: 18,
+    color: 'white',
   },
 });
 
