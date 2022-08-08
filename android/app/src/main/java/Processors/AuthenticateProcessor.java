@@ -33,8 +33,14 @@ import okhttp3.RequestBody;
 // Android Note 2:  Android does not have a onFaceTecSDKCompletelyDone function that you must implement like "Part 10" of iOS and Android Samples.  Instead, onActivityResult is used as the place in code you get control back from the FaceTec SDK.
 public class AuthenticateProcessor extends Processor implements FaceTecFaceScanProcessor {
     private boolean success = false;
+    SessionTokenSuccessCallback sessionTokenSuccessCallback;
+    SessionTokenErrorCallback sessionTokenErrorCallback;
+    String id;
 
-    public AuthenticateProcessor(String sessionToken, Context context) {
+    public AuthenticateProcessor(String sessionToken, Context context, final SessionTokenErrorCallback sessionTokenErrorCallback, SessionTokenSuccessCallback sessionTokenSuccessCallback, String id) {
+        this.sessionTokenSuccessCallback = sessionTokenSuccessCallback;
+        this.sessionTokenErrorCallback = sessionTokenErrorCallback;
+        this.id = id;
 
 
         //
@@ -69,7 +75,9 @@ public class AuthenticateProcessor extends Processor implements FaceTecFaceScanP
         try {
             parameters.put("faceScan", sessionResult.getFaceScanBase64());
             parameters.put("auditTrailImage", sessionResult.getAuditTrailCompressedBase64()[0]);
-            parameters.put("lowQualityAuditTrailImage", sessionResult.getLowQualityAuditTrailCompressedBase64()[0]);}
+            parameters.put("lowQualityAuditTrailImage", sessionResult.getLowQualityAuditTrailCompressedBase64()[0]);
+            parameters.put("externalDatabaseRefID", id);
+        }
         catch(JSONException e) {
             e.printStackTrace();
             Log.d("FaceTecSDKSampleApp", "Exception raised while attempting to create JSON payload for upload.");
@@ -112,10 +120,12 @@ public class AuthenticateProcessor extends Processor implements FaceTecFaceScanP
 
                 String responseString = response.body().string();
                 response.body().close();
+                Log.d("FaceTecSDKSampleApp", "Exception Error"+ responseString);
                 try {
                     JSONObject responseJSON = new JSONObject(responseString);
                     boolean wasProcessed = responseJSON.getBoolean("wasProcessed");
                     String scanResultBlob = responseJSON.getString("scanResultBlob");
+                    Log.d("FaceTecSDKSampleApp", "Exception from"+ responseJSON);
 
                     // In v9.2.0+, we key off a new property called wasProcessed to determine if we successfully processed the Session result on the Server.
                     // Device SDK UI flow is now driven by the proceedToNextStep function, which should receive the scanResultBlob from the Server SDK response.
@@ -127,17 +137,21 @@ public class AuthenticateProcessor extends Processor implements FaceTecFaceScanP
                         // In v9.2.0+, simply pass in scanResultBlob to the proceedToNextStep function to advance the User flow.
                         // scanResultBlob is a proprietary, encrypted blob that controls the logic for what happens next for the User.
                         success = faceScanResultCallback.proceedToNextStep(scanResultBlob);
+                        sessionTokenSuccessCallback.onSuccess(scanResultBlob);
                     }
                     else {
                         // CASE:  UNEXPECTED response from API.  Our Sample Code keys off a wasProcessed boolean on the root of the JSON object --> You define your own API contracts with yourself and may choose to do something different here based on the error.
                         faceScanResultCallback.cancel();
+                        Log.d("FaceTecSDKSampleApp", "Msg From"+ responseJSON);
+                        sessionTokenErrorCallback.onError("AuthenticationFailed");
                     }
                 }
                 catch(JSONException e) {
                     // CASE:  Parsing the response into JSON failed --> You define your own API contracts with yourself and may choose to do something different here based on the error.  Solid server-side code should ensure you don't get to this case.
                     e.printStackTrace();
-                    Log.d("FaceTecSDKSampleApp", "Exception raised while attempting to parse JSON result.");
+                    Log.d("FaceTecSDKSampleApp", "Exception raised while attempting to parse JSON result." );
                     faceScanResultCallback.cancel();
+                    sessionTokenErrorCallback.onError("AuthenticationCanceled");
                 }
             }
 
@@ -146,6 +160,7 @@ public class AuthenticateProcessor extends Processor implements FaceTecFaceScanP
                 // CASE:  Network Request itself is erroring --> You define your own API contracts with yourself and may choose to do something different here based on the error.
                 Log.d("FaceTecSDKSampleApp", "Exception raised while attempting HTTPS call.");
                 faceScanResultCallback.cancel();
+                sessionTokenErrorCallback.onError("AuthenticationException");
             }
         });
     }

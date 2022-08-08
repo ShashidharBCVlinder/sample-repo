@@ -34,8 +34,10 @@ import okhttp3.RequestBody;
 // Android Note 2:  Android does not have a onFaceTecSDKCompletelyDone function that you must implement like "Part 10" of iOS and Android Samples.  Instead, onActivityResult is used as the place in code you get control back from the FaceTec SDK.
 public class LivenessCheckProcessor extends Processor implements FaceTecFaceScanProcessor {
     private boolean success = false;
+    SessionTokenSuccessCallback sessionTokenSuccessCallback;
+    SessionTokenErrorCallback sessionTokenErrorCallback;
 
-    public LivenessCheckProcessor(String sessionToken, Context context) {
+    public LivenessCheckProcessor(String sessionToken, Context context, final SessionTokenErrorCallback sessionTokenErrorCallback, SessionTokenSuccessCallback sessionTokenSuccessCallback) {
 
         //
         // Part 1:  Starting the FaceTec Session
@@ -45,7 +47,10 @@ public class LivenessCheckProcessor extends Processor implements FaceTecFaceScan
         // - FaceTecFaceScanProcessor:  A class that implements FaceTecFaceScanProcessor, which handles the FaceScan when the User completes a Session.  In this example, "self" implements the class.
         // - sessionToken:  A valid Session Token you just created by calling your API to get a Session Token from the Server SDK.
         //
+        this.sessionTokenSuccessCallback = sessionTokenSuccessCallback;
+        this.sessionTokenErrorCallback = sessionTokenErrorCallback;
         FaceTecSessionActivity.createAndLaunchSession(context, LivenessCheckProcessor.this, sessionToken);
+
     }
 
     //
@@ -134,10 +139,12 @@ public class LivenessCheckProcessor extends Processor implements FaceTecFaceScan
                         // In v9.2.0+, simply pass in scanResultBlob to the proceedToNextStep function to advance the User flow.
                         // scanResultBlob is a proprietary, encrypted blob that controls the logic for what happens next for the User.
                         success = faceScanResultCallback.proceedToNextStep(scanResultBlob);
+                        sessionTokenSuccessCallback.onSuccess(scanResultBlob);
                     }
                     else {
                         // CASE:  UNEXPECTED response from API.  Our Sample Code keys off a wasProcessed boolean on the root of the JSON object --> You define your own API contracts with yourself and may choose to do something different here based on the error.
                         faceScanResultCallback.cancel();
+                        sessionTokenErrorCallback.onError("EnrollmentProcessor");
                     }
                 }
                 catch(JSONException e) {
@@ -145,6 +152,7 @@ public class LivenessCheckProcessor extends Processor implements FaceTecFaceScan
                     e.printStackTrace();
                     Log.d("FaceTecSDKSampleApp", "Exception raised while attempting to parse JSON result.");
                     faceScanResultCallback.cancel();
+                    sessionTokenErrorCallback.onError("EnrollmentProcessor");
                 }
             }
 
@@ -153,6 +161,7 @@ public class LivenessCheckProcessor extends Processor implements FaceTecFaceScan
                 // CASE:  Network Request itself is erroring --> You define your own API contracts with yourself and may choose to do something different here based on the error.
                 Log.d("FaceTecSDKSampleApp", "Exception raised while attempting HTTPS call.");
                 faceScanResultCallback.cancel();
+                sessionTokenErrorCallback.onError("EnrollmentProcessor");
             }
         });
     }

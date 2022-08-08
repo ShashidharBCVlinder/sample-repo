@@ -34,7 +34,14 @@ import okhttp3.RequestBody;
 // Android Note 2:  Android does not have a onFaceTecSDKCompletelyDone function that you must implement like "Part 10" of iOS and Android Samples.  Instead, onActivityResult is used as the place in code you get control back from the FaceTec SDK.
 public class EnrollmentProcessor extends Processor implements FaceTecFaceScanProcessor {
     private boolean success = false;
-    public EnrollmentProcessor(String sessionToken, Context context) {
+    SessionTokenSuccessCallback sessionTokenSuccessCallback;
+    SessionTokenErrorCallback sessionTokenErrorCallback;
+    String id;
+    public EnrollmentProcessor(String sessionToken, Context context, final SessionTokenErrorCallback sessionTokenErrorCallback, SessionTokenSuccessCallback sessionTokenSuccessCallback, String id) {
+
+        this.sessionTokenSuccessCallback = sessionTokenSuccessCallback;
+        this.sessionTokenErrorCallback = sessionTokenErrorCallback;
+        this.id = id;
 
         //
         // Part 1:  Starting the FaceTec Session
@@ -73,6 +80,7 @@ public class EnrollmentProcessor extends Processor implements FaceTecFaceScanPro
             parameters.put("faceScan", sessionResult.getFaceScanBase64());
             parameters.put("auditTrailImage", sessionResult.getAuditTrailCompressedBase64()[0]);
             parameters.put("lowQualityAuditTrailImage", sessionResult.getLowQualityAuditTrailCompressedBase64()[0]);
+            parameters.put("externalDatabaseRefID", id);
         }
         catch(JSONException e) {
             e.printStackTrace();
@@ -116,6 +124,7 @@ public class EnrollmentProcessor extends Processor implements FaceTecFaceScanPro
 
                 String responseString = response.body().string();
                 response.body().close();
+                Log.d("FaceTecSDKSampleApp", "Error in responce" + responseString);
                 try {
                     JSONObject responseJSON = new JSONObject(responseString);
                     boolean wasProcessed = responseJSON.getBoolean("wasProcessed");
@@ -131,10 +140,12 @@ public class EnrollmentProcessor extends Processor implements FaceTecFaceScanPro
                         // In v9.2.0+, simply pass in scanResultBlob to the proceedToNextStep function to advance the User flow.
                         // scanResultBlob is a proprietary, encrypted blob that controls the logic for what happens next for the User.
                         success = faceScanResultCallback.proceedToNextStep(scanResultBlob);
+                        sessionTokenSuccessCallback.onSuccess(scanResultBlob);
                     }
                     else {
                         // CASE:  UNEXPECTED response from API.  Our Sample Code keys off a wasProcessed boolean on the root of the JSON object --> You define your own API contracts with yourself and may choose to do something different here based on the error.
                         faceScanResultCallback.cancel();
+                        sessionTokenErrorCallback.onError("EnrollmentProcessor");
                     }
                 }
                 catch(JSONException e) {
@@ -142,6 +153,7 @@ public class EnrollmentProcessor extends Processor implements FaceTecFaceScanPro
                     e.printStackTrace();
                     Log.d("FaceTecSDKSampleApp", "Exception raised while attempting to parse JSON result.");
                     faceScanResultCallback.cancel();
+                    sessionTokenErrorCallback.onError("EnrollmentProcessor");
                 }
             }
 
@@ -150,6 +162,7 @@ public class EnrollmentProcessor extends Processor implements FaceTecFaceScanPro
                 // CASE:  Network Request itself is erroring --> You define your own API contracts with yourself and may choose to do something different here based on the error.
                 Log.d("FaceTecSDKSampleApp", "Exception raised while attempting HTTPS call.");
                 faceScanResultCallback.cancel();
+                sessionTokenErrorCallback.onError("EnrollmentProcessor");
             }
         });
     }

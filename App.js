@@ -30,6 +30,7 @@ import {
 } from 'react-native/Libraries/NewAppScreen';
 
 import {ButtonVW} from '@vlinder-mobile/button-widget-rn';
+import {ToastVW} from '@vlinder-mobile/toast-message-widget-rn';
 
 const Section = ({children, title}): Node => {
   const isDarkMode = useColorScheme() === 'dark';
@@ -76,16 +77,61 @@ const App: () => Node = () => {
           style={{
             backgroundColor: isDarkMode ? Colors.black : Colors.white,
           }}>
+          <Section title="Initialize SDK">
+            <ButtonVW
+              title="Click Me"
+              onPress={() => {
+                console.log('Clicked Me');
+                NativeModules.VlinderFaceTech.Init(
+                  () => {
+                    console.log('init success');
+                  },
+                  () => console.log('init fail'),
+                );
+              }}
+            />
+          </Section>
+          <Section title="Liveness Check">
+            <ButtonVW
+              title="Click Me"
+              onPress={() =>
+                NativeModules.VlinderFaceTech.LivenessCheck(
+                  resp => {
+                    console.log('livenessCheck ' + resp);
+                  },
+                  error => console.log('livenessCheck ' + error),
+                )
+              }
+            />
+          </Section>
           <Section title="Enrollment">
             <ButtonVW
               title="Click Me"
-              onPress={() => NativeModules.VlinderFaceTech.LivenessCheck()}
+              onPress={() =>
+                NativeModules.VlinderFaceTech.EnrollmentOfUser(
+                  resp => {
+                    console.log('Enrollment Successful: ' + resp);
+                  },
+                  error => {
+                    console.log('Enrollment Error: ' + error);
+                  },
+                )
+              }
             />
           </Section>
           <Section title="Authentication">
             <ButtonVW
               title="Click Me"
-              onPress={() => NativeModules.VlinderFaceTech.LivenessCheck()}
+              onPress={() =>
+                NativeModules.VlinderFaceTech.AuthenticationOfUser(
+                  resp => {
+                    console.log('Authentication Successful: ' + resp);
+                  },
+                  error => {
+                    console.log('Authentication Error: ' + error);
+                  },
+                )
+              }
             />
           </Section>
         </View>
